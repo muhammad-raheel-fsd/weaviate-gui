@@ -71,11 +71,58 @@ class ConnectionStore {
       "Content-Type": "application/json",
     };
 
-    if (this._apiKey) {
+    // Only add Authorization header if API key is provided and not empty
+    if (this._apiKey && this._apiKey.trim() !== "") {
       headers["Authorization"] = `Bearer ${this._apiKey}`;
     }
 
     return headers;
+  }
+
+  // Check if we're in a production environment
+  isProduction(): boolean {
+    return process.env.NODE_ENV === "production";
+  }
+
+  // Check if API key is required (production or when URL contains certain patterns)
+  isApiKeyRequired(): boolean {
+    if (this.isProduction()) {
+      return true;
+    }
+
+    // Check if URL suggests a cloud/remote instance
+    const url = this._url.toLowerCase();
+    return (
+      url.includes("weaviate.network") ||
+      url.includes("weaviate.io") ||
+      url.includes("cloud") ||
+      url.startsWith("https://")
+    );
+  }
+
+  // Validate connection configuration
+  validateConnection(): { isValid: boolean; message?: string } {
+    if (!this._url) {
+      return { isValid: false, message: "Weaviate URL is required" };
+    }
+
+    if (
+      this.isApiKeyRequired() &&
+      (!this._apiKey || this._apiKey.trim() === "")
+    ) {
+      return {
+        isValid: false,
+        message: "API key is required for production or cloud instances",
+      };
+    }
+
+    try {
+      new URL(this._url);
+    } catch {
+      return { isValid: false, message: "Invalid Weaviate URL format" };
+    }
+
+    return { isValid: true };
   }
 
   // Generate a unique connection ID based on the URL and a timestamp

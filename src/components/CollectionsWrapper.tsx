@@ -1,21 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { CollectionsList } from './CollectionsList';
-import { CollectionInfo, getConnectionId } from '@/lib/weaviate';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { CollectionsList } from "./CollectionsList";
+import { CollectionStats } from "./CollectionStats";
+import { ImportExportPanel } from "./ImportExportPanel";
+import { CollectionInfo, getConnectionId } from "@/lib/weaviate";
+import { useRouter } from "next/navigation";
 
 interface CollectionsWrapperProps {
   initialCollections: CollectionInfo[];
 }
 
-export function CollectionsWrapper({ initialCollections }: CollectionsWrapperProps) {
-  const [collections, setCollections] = useState<CollectionInfo[]>(initialCollections);
+export function CollectionsWrapper({
+  initialCollections,
+}: CollectionsWrapperProps) {
+  const [collections, setCollections] =
+    useState<CollectionInfo[]>(initialCollections);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastConnectionId, setLastConnectionId] = useState<string>(getConnectionId());
+  const [lastConnectionId, setLastConnectionId] = useState<string>(
+    getConnectionId()
+  );
   const router = useRouter();
-  
+
   // Check if the connection has changed and refresh if needed
   useEffect(() => {
     // This effect will run on mount and whenever the component re-renders
@@ -23,13 +30,13 @@ export function CollectionsWrapper({ initialCollections }: CollectionsWrapperPro
     const checkConnectionChange = async () => {
       const currentConnectionId = getConnectionId();
       if (currentConnectionId && currentConnectionId !== lastConnectionId) {
-        console.log('Connection changed, refreshing collections');
+        console.log("Connection changed, refreshing collections");
         setLastConnectionId(currentConnectionId);
         // Force a refresh with cache busting to ensure we get fresh data
         await refreshCollections(true);
       }
     };
-    
+
     checkConnectionChange();
   }, [lastConnectionId]); // Re-run when lastConnectionId changes
 
@@ -37,21 +44,25 @@ export function CollectionsWrapper({ initialCollections }: CollectionsWrapperPro
     try {
       setLoading(true);
       // Add a cache-busting parameter to force a fresh request
-      const url = forceRefresh 
+      const url = forceRefresh
         ? `/api/collections?t=${Date.now()}&connection=${getConnectionId()}`
-        : '/api/collections';
+        : "/api/collections";
       const response = await fetch(url);
       const result = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(result.details || result.error || 'Failed to fetch collections');
+        throw new Error(
+          result.details || result.error || "Failed to fetch collections"
+        );
       }
 
       setCollections(result.collections);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch collections:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch collections');
+      console.error("Failed to fetch collections:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch collections"
+      );
     } finally {
       setLoading(false);
     }
@@ -64,7 +75,10 @@ export function CollectionsWrapper({ initialCollections }: CollectionsWrapperPro
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-4" role="alert">
+      <div
+        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-4"
+        role="alert"
+      >
         <p>{error}</p>
       </div>
     );
@@ -78,5 +92,17 @@ export function CollectionsWrapper({ initialCollections }: CollectionsWrapperPro
     );
   }
 
-  return <CollectionsList collections={collections} onDeleteSuccess={handleDeleteSuccess} />;
+  return (
+    <div className="collections-wrapper">
+      <CollectionStats collections={collections} />
+      <ImportExportPanel
+        collections={collections}
+        onRefresh={refreshCollections}
+      />
+      <CollectionsList
+        collections={collections}
+        onDeleteSuccess={handleDeleteSuccess}
+      />
+    </div>
+  );
 }
