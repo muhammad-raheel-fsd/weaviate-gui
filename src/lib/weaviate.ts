@@ -5,7 +5,7 @@ type SortConfig = {
 
 export async function getCollectionData(
   className: string,
-  properties: { name: string; dataType: string | string[] }[],
+  properties: { name: string; dataType: string | string[]; nestedProperties?: { name: string; dataType: string[] }[] }[],
   sort?: SortConfig,
   limit?: number,
   offset?: number
@@ -24,13 +24,35 @@ export async function getCollectionData(
       .filter(Boolean)
       .join(", ");
 
+    // Build property queries with support for nested objects
+    const propertyQueries = properties.map((prop) => {
+      const isObjectType = Array.isArray(prop.dataType) ?
+        prop.dataType.some(type => type.toLowerCase().includes('object')) :
+        typeof prop.dataType === 'string' && prop.dataType.toLowerCase().includes('object');
+
+      if (isObjectType && prop.nestedProperties && prop.nestedProperties.length > 0) {
+        // For object types with nested properties, query all nested fields
+        const nestedFields = prop.nestedProperties.map(nested => `          ${nested.name}`).join('\n');
+        return `        ${prop.name} {
+${nestedFields}
+        }`;
+      } else if (isObjectType) {
+        // For object types without known nested properties, skip them
+        console.log(`Skipping object property without nested info: ${prop.name}`);
+        return null;
+      } else {
+        // Regular field
+        return `        ${prop.name}`;
+      }
+    }).filter(Boolean);
+
     const query = `{
       Get {
         ${className}${directives ? `(${directives})` : ""} {
           _additional {
             id
           }
-          ${properties.map((p) => p.name).join("\n")}
+${propertyQueries.join('\n')}
         }
       }
     }`;
@@ -59,6 +81,10 @@ export interface CollectionInfo {
     name: string;
     description?: string;
     dataType?: string[];
+    nestedProperties?: {
+      name: string;
+      dataType: string[];
+    }[];
   }[];
 }
 
@@ -160,6 +186,10 @@ type WeaviateClass = {
     name: string;
     dataType: string[];
     description?: string;
+    nestedProperties?: {
+      name: string;
+      dataType: string[];
+    }[];
   }[];
 };
 
@@ -298,6 +328,7 @@ export async function getCollections(): Promise<CollectionInfo[]> {
             name: p.name,
             dataType: p.dataType,
             description: p.description,
+            nestedProperties: p.nestedProperties || undefined,
           })) ?? [],
       });
     }

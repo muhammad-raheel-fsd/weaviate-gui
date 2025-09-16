@@ -93,6 +93,28 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
     };
   };
 
+  const renderObjectValue = (obj: Record<string, unknown>): React.ReactNode => {
+    // Filter out system fields like __typename
+    const cleanedObj = Object.fromEntries(
+      Object.entries(obj).filter(([key]) => !key.startsWith('__'))
+    );
+
+    if (Object.keys(cleanedObj).length === 0) {
+      return <span className="text-gray-400 italic">empty object</span>;
+    }
+
+    return (
+      <div className="space-y-1">
+        {Object.entries(cleanedObj).map(([key, val]) => (
+          <div key={key} className="text-xs">
+            <span className="font-medium text-gray-600">{key}:</span>{' '}
+            <span className="text-gray-800">{val ?? 'null'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderCell = (row: TableData, column: ColumnDef) => {
     const value = row[column.key];
     if (column.render) {
@@ -102,15 +124,41 @@ export const DynamicTable: React.FC<DynamicTableProps> = ({
       return <span className="text-gray-400 italic">null</span>;
     }
 
-    let displayValue: string;
-    if (typeof value === "object") {
-      displayValue = Array.isArray(value)
-        ? value.join(", ")
-        : JSON.stringify(value);
-    } else {
-      displayValue = String(value);
+    // Handle object values (like nested Weaviate objects)
+    if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+      return (
+        <div className="group relative">
+          <div className="p-2 bg-gray-50 rounded-md border border-gray-200 max-w-xs">
+            {renderObjectValue(value as Record<string, unknown>)}
+          </div>
+        </div>
+      );
     }
 
+    // Handle arrays
+    if (Array.isArray(value)) {
+      const displayValue = value.join(", ");
+      const { truncated, isTruncated } = truncateText(displayValue);
+
+      if (isTruncated) {
+        return (
+          <div className="group relative">
+            <span className="cursor-help text-blue-600 hover:text-blue-800 transition-colors duration-200">
+              {truncated}
+            </span>
+            <div className="invisible group-hover:visible absolute z-20 bottom-full left-0 mb-2 p-4 bg-gray-900 text-white text-sm rounded-xl shadow-xl max-w-sm break-words border border-gray-700">
+              <div className="font-medium text-gray-200 mb-1">Full Array:</div>
+              <div className="text-gray-100">{displayValue}</div>
+              <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        );
+      }
+      return <span>{displayValue}</span>;
+    }
+
+    // Handle primitive values (string, number, boolean)
+    const displayValue = String(value);
     const { truncated, isTruncated } = truncateText(displayValue);
 
     if (isTruncated) {

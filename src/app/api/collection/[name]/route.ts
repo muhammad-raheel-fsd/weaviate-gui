@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
       name,
       collectionInfo.properties.map((prop) => ({
         name: prop.name,
-        dataType: prop.dataType || ['string']
+        dataType: prop.dataType || ['string'],
+        nestedProperties: prop.nestedProperties
       })),
       sortProperty && sortOrder ? { property: sortProperty, order: sortOrder } : undefined,
       limit ? parseInt(limit) : undefined,

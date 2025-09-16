@@ -259,12 +259,7 @@ export function CollectionView({
     key: prop.name,
     label: prop.name,
     dataType: prop.dataType,
-    render: (value: unknown) => {
-      if (Array.isArray(value)) {
-        return value.join(", ");
-      }
-      return String(value);
-    },
+    // Remove custom render - let DynamicTable handle object rendering
   }));
 
   const handleSort = (columnKey: string) => {
