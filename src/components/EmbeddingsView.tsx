@@ -12,7 +12,7 @@ interface ObjectWithVector {
   id: string;
   properties: Record<string, unknown>;
   vectors?: {
-    default?: number[];
+    [key: string]: number[];
   };
   class: string;
 }
@@ -51,7 +51,7 @@ export function EmbeddingsView({
     }
   };
 
-  const renderVector = (vector: number[]) => {
+  const renderVector = (vector: number[], vectorName: string) => {
     if (!vector || vector.length === 0) {
       return <span className="text-gray-500">No vector data</span>;
     }
@@ -73,10 +73,18 @@ export function EmbeddingsView({
     });
     const maxCount = Math.max(...histogram);
 
+    // Color scheme based on vector name
+    const colorScheme = vectorName === 'default'
+      ? { gradient: 'from-blue-50 to-indigo-50', border: 'border-blue-200', bar: 'from-blue-500 to-blue-300', badge: 'bg-blue-100 text-blue-700' }
+      : { gradient: 'from-purple-50 to-pink-50', border: 'border-purple-200', bar: 'from-purple-500 to-purple-300', badge: 'bg-purple-100 text-purple-700' };
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="text-xl font-semibold text-gray-900">
+            <span className={`px-2 py-1 text-sm font-semibold rounded ${colorScheme.badge} mr-2`}>
+              {vectorName}
+            </span>
             Embedding Vector
             <span className="ml-2 text-sm font-normal text-gray-500">
               {vector.length} dimensions
@@ -93,7 +101,7 @@ export function EmbeddingsView({
         </div>
 
         {/* Vector Distribution Visualization */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+        <div className={`bg-gradient-to-br ${colorScheme.gradient} p-6 rounded-xl border ${colorScheme.border}`}>
           <h4 className="text-sm font-medium text-gray-700 mb-4">
             Value Distribution
           </h4>
@@ -101,7 +109,7 @@ export function EmbeddingsView({
             {histogram.map((count, index) => (
               <div
                 key={index}
-                className="bg-gradient-to-t from-blue-500 to-blue-300 rounded-t"
+                className={`bg-gradient-to-t ${colorScheme.bar} rounded-t`}
                 style={{
                   height: `${(count / maxCount) * 100}%`,
                   width: "4%",
@@ -278,7 +286,19 @@ export function EmbeddingsView({
         </div>
 
         <div className="space-y-8">
-          {object.vectors?.default && renderVector(object.vectors.default)}
+          {object.vectors && Object.keys(object.vectors).length > 0 ? (
+            <>
+              {Object.entries(object.vectors).map(([vectorName, vector]) => (
+                <div key={vectorName} className="border-b border-gray-200 pb-8 last:border-b-0">
+                  {renderVector(vector, vectorName)}
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="text-gray-500 text-center py-8">
+              No vector data available for this object
+            </div>
+          )}
           {renderProperties(object.properties)}
         </div>
       </div>
