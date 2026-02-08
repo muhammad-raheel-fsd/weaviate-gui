@@ -10,6 +10,7 @@ class ConnectionStore {
   private _url: string;
   private _apiKey: string;
   private _connectionId: string = "";
+  private _tenant: string = "";
 
   private constructor(initialUrl: string, initialApiKey: string) {
     this._url = initialUrl;
@@ -58,11 +59,20 @@ class ConnectionStore {
     this._connectionId = id;
   }
 
+  get tenant(): string {
+    return this._tenant;
+  }
+
+  set tenant(newTenant: string) {
+    this._tenant = newTenant;
+  }
+
   // Reset the store (mainly for testing purposes)
   reset(initialUrl?: string, initialApiKey?: string): void {
     this._url = initialUrl || process.env.WEAVIATE_URL || "";
     this._apiKey = initialApiKey || process.env.WEAVIATE_API_KEY || "";
     this._connectionId = "";
+    this._tenant = "";
   }
 
   // Generate authentication headers for requests
@@ -76,6 +86,7 @@ class ConnectionStore {
       headers["Authorization"] = `Bearer ${this._apiKey}`;
     }
 
+    console.log("HEADERS ===================", headers);
     return headers;
   }
 

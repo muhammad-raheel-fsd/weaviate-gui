@@ -13,6 +13,7 @@ export async function GET(
     const query = searchParams.get("query");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
+    const tenant = searchParams.get("tenant") || "";
 
     if (!query) {
       return NextResponse.json(
@@ -22,9 +23,11 @@ export async function GET(
     }
 
     // Build GraphQL query with BM25 search
+    const tenantDirective = tenant ? `tenant: "${tenant}",` : "";
     const graphqlQuery = `{
       Get {
         ${collection}(
+          ${tenantDirective}
           bm25: {
             query: "${query.replace(/"/g, '\\"')}"
           }

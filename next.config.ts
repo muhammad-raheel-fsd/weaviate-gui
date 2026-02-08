@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
 console.log("Next.js config - Using Weaviate URL:", process.env.WEAVIATE_URL);
 console.log(
   "Next.js config - Using Weaviate API Key:",
-  process.env.WEAVIATE_API_KEY ? "***REDACTED***" : "undefined"
+  process.env.WEAVIATE_API_KEY ? "sio_admin_api_key" : "undefined"
 );
 
 export default nextConfig;

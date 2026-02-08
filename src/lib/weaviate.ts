@@ -8,9 +8,11 @@ export async function getCollectionData(
   properties: { name: string; dataType: string | string[]; nestedProperties?: { name: string; dataType: string[] }[] }[],
   sort?: SortConfig,
   limit?: number,
-  offset?: number
+  offset?: number,
+  tenant?: string
 ): Promise<CollectionData[]> {
   try {
+    const tenantDirective = tenant ? `tenant: "${tenant}"` : "";
     const sortDirective = sort
       ? `sort: {
         path: ["${sort.property}"],
@@ -20,7 +22,7 @@ export async function getCollectionData(
 
     const paginationDirective = `limit: ${limit}, offset: ${offset}`;
 
-    const directives = [sortDirective, paginationDirective]
+    const directives = [tenantDirective, sortDirective, paginationDirective]
       .filter(Boolean)
       .join(", ");
 
@@ -90,14 +92,16 @@ export interface CollectionInfo {
 
 export async function deleteObjects(
   className: string,
-  objectIds: string[]
+  objectIds: string[],
+  tenant?: string
 ): Promise<void> {
   console.log(`\n*** Collection: ${className}`);
   console.log(`\tDeleting ${objectIds.length} objects`);
 
   for (const id of objectIds) {
     try {
-      const response = await fetch(`${connectionStore.url}/v1/objects/${id}`, {
+      const tenantParam = tenant ? `?tenant=${tenant}` : "";
+      const response = await fetch(`${connectionStore.url}/v1/objects/${id}${tenantParam}`, {
         method: "DELETE",
         headers: connectionStore.getAuthHeaders(),
       });
@@ -277,14 +281,16 @@ export async function executeQuery(
 }
 
 export async function getObjectsByClass(
-  className: string
+  className: string,
+  tenant?: string
 ): Promise<CollectionData[]> {
   console.log(`\n*** Collection: ${className}`);
   console.log(`\tFetching objects`);
+  const tenantParam = tenant ? `(tenant: "${tenant}")` : "";
   const query = `
   {
     Get {
-      ${className} {
+      ${className}${tenantParam} {
         _additional {
           id
         }
@@ -297,7 +303,7 @@ export async function getObjectsByClass(
   return results;
 }
 
-export async function getCollections(): Promise<CollectionInfo[]> {
+export async function getCollections(tenant?: string): Promise<CollectionInfo[]> {
   console.log(`Connected to Weaviate at: ${connectionStore.url}`);
   try {
     const response = await fetch(`${connectionStore.url}/v1/schema`, {
@@ -317,7 +323,7 @@ export async function getCollections(): Promise<CollectionInfo[]> {
     for (const weavClass of classes) {
       console.log(`\n*** Collection: ${weavClass.class}`);
       console.log(`\tFetching object count`);
-      const count = await getObjectCount(weavClass.class);
+      const count = await getObjectCount(weavClass.class, tenant);
       console.log(`\tFetching properties`);
       result.push({
         name: weavClass.class,
@@ -387,11 +393,12 @@ async function executeAggregateQuery(
   }
 }
 
-async function getObjectCount(className: string): Promise<number> {
+async function getObjectCount(className: string, tenant?: string): Promise<number> {
+  const tenantParam = tenant ? `(tenant: "${tenant}")` : "";
   const aggregateQuery = `
   {
     Aggregate {
-      ${className} {
+      ${className}${tenantParam} {
         meta {
           count
         }

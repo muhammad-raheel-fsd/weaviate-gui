@@ -11,6 +11,7 @@ export async function GET(
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const include = searchParams.get("include") || "";
+    const tenant = searchParams.get("tenant") || "";
 
     if (!id) {
       return NextResponse.json(
@@ -19,9 +20,12 @@ export async function GET(
       );
     }
 
-    // Build the URL with include parameter if specified
-    const includeParam = include ? `?include=${include}` : "";
-    const url = `${connectionStore.url}/v1/objects/${id}${includeParam}`;
+    // Build the URL with include and tenant parameters
+    const queryParams = new URLSearchParams();
+    if (include) queryParams.set("include", include);
+    if (tenant) queryParams.set("tenant", tenant);
+    const queryString = queryParams.toString();
+    const url = `${connectionStore.url}/v1/objects/${id}${queryString ? `?${queryString}` : ""}`;
 
     console.log("URL ======================>", url);
 

@@ -6,6 +6,7 @@ interface EmbeddingsViewProps {
   objectId: string;
   className: string;
   onClose: () => void;
+  tenant?: string | null;
 }
 
 interface ObjectWithVector {
@@ -21,6 +22,7 @@ export function EmbeddingsView({
   objectId,
   className,
   onClose,
+  tenant,
 }: EmbeddingsViewProps) {
   const [object, setObject] = useState<ObjectWithVector | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,8 @@ export function EmbeddingsView({
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/objects/${objectId}?include=vector`);
+      const tenantParam = tenant ? `&tenant=${tenant}` : "";
+      const response = await fetch(`/api/objects/${objectId}?include=vector${tenantParam}`);
       const result = await response.json();
 
       if (!response.ok) {

@@ -10,7 +10,8 @@ export async function DELETE(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const name = url.pathname.split('/').pop();
-    
+    const tenant = url.searchParams.get('tenant') || undefined;
+
     if (!name) {
       return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
     }
@@ -19,7 +20,7 @@ export async function DELETE(request: NextRequest) {
     if (data.deleteCollection) {
       await deleteCollection(name);
     } else if (data.objectIds) {
-      await deleteObjects(name, data.objectIds);
+      await deleteObjects(name, data.objectIds, tenant);
     } else {
       return NextResponse.json({ error: 'Invalid delete request' }, { status: 400 });
     }
@@ -50,14 +51,15 @@ export async function GET(request: NextRequest) {
     const sortOrder = url.searchParams.get('sortOrder') as 'asc' | 'desc' | null;
     const limit = url.searchParams.get('limit');
     const offset = url.searchParams.get('offset');
+    const tenant = url.searchParams.get('tenant') || undefined;
 
     if (!name) {
       console.log('API Route - Missing collection name in URL');
       return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
     }
 
-    console.log(`API Route - Fetching collections for: ${name}`);
-    const collections = await getCollections();
+    console.log(`API Route - Fetching collections for: ${name}${tenant ? ` (tenant: ${tenant})` : ''}`);
+    const collections = await getCollections(tenant);
     const collectionInfo = collections.find((c) => c.name === name);
 
     if (!collectionInfo) {
@@ -75,7 +77,8 @@ export async function GET(request: NextRequest) {
       })),
       sortProperty && sortOrder ? { property: sortProperty, order: sortOrder } : undefined,
       limit ? parseInt(limit) : undefined,
-      offset ? parseInt(offset) : undefined
+      offset ? parseInt(offset) : undefined,
+      tenant
     );
 
     console.log(`API Route - Successfully fetched data for: ${name}`);

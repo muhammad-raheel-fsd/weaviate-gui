@@ -7,6 +7,7 @@ import { DeleteObjectsModal } from "@/components/DeleteObjectsModal";
 import { EmbeddingsView } from "@/components/EmbeddingsView";
 import { DocumentRelationshipView } from "@/components/DocumentRelationshipView";
 import { SearchBar } from "@/components/SearchBar";
+import { TenantSelector } from "@/components/TenantSelector";
 
 interface CollectionViewProps {
   collectionName: string;
@@ -40,6 +41,7 @@ export function CollectionView({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<CollectionData[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +77,9 @@ export function CollectionView({
         }
         url.searchParams.set("limit", String(OBJECTS_PER_PAGE));
         url.searchParams.set("offset", String(currentOffset));
+        if (selectedTenant) {
+          url.searchParams.set("tenant", selectedTenant);
+        }
 
         const response = await fetch(url);
         const result = await response.json();
@@ -110,12 +115,19 @@ export function CollectionView({
         setLoadingMore(false);
       }
     },
-    [collectionName, sortConfig, offset]
+    [collectionName, sortConfig, offset, selectedTenant]
   );
 
   useEffect(() => {
     fetchData(false);
   }, [sortConfig]);
+
+  // Refetch data when tenant changes
+  useEffect(() => {
+    if (selectedTenant !== null) {
+      fetchData(false);
+    }
+  }, [selectedTenant]);
 
   const handleLoadMore = () => {
     fetchData(true);
@@ -149,7 +161,10 @@ export function CollectionView({
   const handleDeleteConfirm = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/collection/${collectionName}`, {
+      const deleteUrl = selectedTenant
+        ? `/api/collection/${collectionName}?tenant=${selectedTenant}`
+        : `/api/collection/${collectionName}`;
+      const response = await fetch(deleteUrl, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -208,11 +223,10 @@ export function CollectionView({
         setIsSearching(true);
         setSearchQuery(query);
 
-        const response = await fetch(
-          `/api/search/${collectionName}?query=${encodeURIComponent(
-            query
-          )}&limit=100`
-        );
+        const searchUrl = selectedTenant
+          ? `/api/search/${collectionName}?query=${encodeURIComponent(query)}&limit=100&tenant=${selectedTenant}`
+          : `/api/search/${collectionName}?query=${encodeURIComponent(query)}&limit=100`;
+        const response = await fetch(searchUrl);
         const result = await response.json();
 
         if (!response.ok) {
@@ -227,7 +241,7 @@ export function CollectionView({
         setIsSearching(false);
       }
     },
-    [collectionName]
+    [collectionName, selectedTenant]
   );
 
   const handleClearSearch = useCallback(() => {
@@ -284,6 +298,10 @@ export function CollectionView({
   return (
     <div>
       <div ref={topRef}>
+        <TenantSelector
+          collection={collectionName}
+          onTenantChange={(tenant) => setSelectedTenant(tenant)}
+        />
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-4">
@@ -390,6 +408,7 @@ export function CollectionView({
           objectId={selectedObjectId}
           className={collectionName}
           onClose={handleCloseEmbeddings}
+          tenant={selectedTenant}
         />
       )}
 
